@@ -1,4 +1,4 @@
-module Timer exposing (Timer, reset, isLess, tick, second, minute, fromMinute, fromSecond, stop, toggle, continue, restart, map, toString)
+module Timer exposing (Timer, going, reset, isLess, tick, second, minute, fromMinute, fromSecond, stop, toggle, continue, restart, map, toString)
 
 type Timer 
     = Going Int     -- Timer is ticking
@@ -30,6 +30,14 @@ tick n timer =
 isLess : Timer -> Timer -> Bool
 isLess t1 t2 =
     getTime t1 < getTime t2
+
+going : Timer -> Bool
+going timer = 
+    case timer of
+        Going _ -> 
+            True
+        _ -> 
+            False
     
 -- Controls
 reset : Timer
@@ -79,7 +87,7 @@ flooredDiv numerator denominator =
 
 toMinute : Timer -> Int
 toMinute timer =
-    modBy 60 <| getTime timer
+    flooredDiv (getTime timer) (toFloat minute)
 
 toSecond : Timer -> Int
 toSecond timer =
