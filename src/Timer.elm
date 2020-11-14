@@ -1,11 +1,9 @@
-module Timer exposing (Timer, isLess, tick, second, minute, fromMinute, fromSecond, stop, toggle, continue, restart, map, toString, init)
+module Timer exposing (Timer, reset, isLess, tick, second, minute, fromMinute, fromSecond, stop, toggle, continue, restart, map, toString)
 
 type Timer 
     = Going Int     -- Timer is ticking
     | Paused Int    -- Timer is paused
 
-init : Timer
-init = Paused 0
 
 -- Misc
 map : (Int -> Int) -> Timer -> Timer
@@ -34,6 +32,9 @@ isLess t1 t2 =
     getTime t1 < getTime t2
     
 -- Controls
+reset : Timer
+reset = Paused 0
+
 toggle : Timer -> Timer
 toggle timer = 
     case timer of
