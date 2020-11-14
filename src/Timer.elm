@@ -1,16 +1,13 @@
-module Timer exposing (Timer, display, second, viewTime)
+module Timer exposing (Timer, isLess, tick, second, minute, fromMinute, fromSecond, stop, toggle, continue, restart, map, toString, init)
 
-import Browser
-import Time exposing (toMinute, toSecond, utc, millisToPosix)
-import Html exposing (..)
-import Html.Events exposing (onClick)
-import Html.Attributes exposing (class)
-
--- MODEL
 type Timer 
     = Going Int     -- Timer is ticking
     | Paused Int    -- Timer is paused
 
+init : Timer
+init = Paused 0
+
+-- Misc
 map : (Int -> Int) -> Timer -> Timer
 map f timer =
     case timer of
@@ -18,7 +15,25 @@ map f timer =
             Going (f time)
         _ ->
             timer
+
+getTime : Timer -> Int
+getTime timer =
+    case timer of
+        Going time ->
+            time
+        Paused time -> 
+            time
+
+tick : Int -> Timer -> Timer
+tick n timer = 
+    map (\t -> t + n) timer
+
+-- checks if the first timer is less then the second timer
+isLess : Timer -> Timer -> Bool
+isLess t1 t2 =
+    getTime t1 < getTime t2
     
+-- Controls
 toggle : Timer -> Timer
 toggle timer = 
     case timer of
@@ -43,77 +58,44 @@ continue timer =
         _ ->
             timer
 
-toPosix : Timer -> Time.Posix
-toPosix timer =
-    (case timer of
-        Going time -> 
-            time
-        Paused time ->
-            time
-    )
-    |> millisToPosix
+restart : Timer
+restart = 
+    Going 0
 
-type Msg
-    = Tick Time.Posix
-    | Stop
-    | Continue
-    | Restart
-    | Toggle
 
-posixToString : Time.Posix -> String
-posixToString posix =
-    (String.padLeft 2 '0' <| String.fromInt <| toMinute utc posix)
+-- Units
+second : Int
+second = 1000
+
+minute : Int 
+minute = 60000
+
+-- Covert
+-- Mostly copied from elm/time
+flooredDiv : Int -> Float -> Int
+flooredDiv numerator denominator = 
+    floor (toFloat numerator / denominator) 
+
+toMinute : Timer -> Int
+toMinute timer =
+    modBy 60 <| getTime timer
+
+toSecond : Timer -> Int
+toSecond timer =
+    modBy 60 (flooredDiv (getTime timer) 1000)
+
+fromMinute : Int -> Timer
+fromMinute n = 
+    Paused (n * minute)
+
+fromSecond : Int -> Timer
+fromSecond n = 
+    Paused (n * second)
+
+toString : Timer -> String
+toString timer =
+    (String.padLeft 2 '0' <| String.fromInt <| toMinute timer)
     ++ ":" ++
-    (String.padLeft 2 '0' <| String.fromInt <| toSecond utc posix)
-
-display : Timer -> String
-display timer =
-    posixToString <| toPosix timer
-
--- VIEW
-
--- NOTE maybe not right to implement this here
---  user will probably want to implement it themself
-viewTime : Timer -> Html Msg
-viewTime timer =
-    h3 [ class "timer" ] [ text <| display timer ]
-
-view : Timer -> Html Msg
-view timer =
-    div []
-        [ viewTime timer
-        , button [ onClick Stop ] [ text "Stop" ]
-        , button [ onClick Toggle ] [ text "Toggle" ]
-        , button [ onClick Continue ] [ text "Continue" ]
-        , button [ onClick Restart ] [ text "Restart" ]
-        ]
-
--- UPDATE
-update : Msg -> Timer -> ( Timer, Cmd Msg )
-update msg timer =
-    case msg of
-        Tick posix ->
-            ( map (\time -> time + 1000) timer, Cmd.none )
-        Stop -> 
-            ( stop timer, Cmd.none )
-        Continue ->
-            ( continue timer, Cmd.none )
-        Restart ->
-            ( Going 0, Cmd.none )
-        Toggle ->
-            ( toggle timer, Cmd.none )
-
--- SUB
-second : Timer -> Sub Msg
-second _ = 
-    Time.every 1000 Tick
+    (String.padLeft 2 '0' <| String.fromInt <| toSecond timer)
 
 
-main : Program () Timer Msg
-main = 
-    Browser.element
-        { init = \_ -> ( Paused 0, Cmd.none )
-        , view = view
-        , update = update
-        , subscriptions = second
-        }
