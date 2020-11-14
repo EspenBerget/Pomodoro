@@ -87,11 +87,11 @@ flooredDiv numerator denominator =
 
 toMinute : Timer -> Int
 toMinute timer =
-    flooredDiv (getTime timer) (toFloat minute)
+    modBy 60 (flooredDiv (getTime timer) (toFloat minute))
 
 toSecond : Timer -> Int
 toSecond timer =
-    modBy 60 (flooredDiv (getTime timer) 1000)
+    modBy 60 (flooredDiv (getTime timer) (toFloat second))
 
 fromMinute : Int -> Timer
 fromMinute n = 
