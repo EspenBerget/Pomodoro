@@ -3,60 +3,129 @@ module Pomodoro exposing (main)
 import Browser
 import Html exposing (..)
 import Html.Events exposing (onClick)
-import Time exposing (utc, toSecond, toMinute)
-import Task
+import Time
+import Timer exposing (Timer, isLess)
+
 
 -- MODEL
-type alias Model = Maybe Int
+type Mode
+    = Work       -- Count when work should be done
+    | ShortBreak -- A short break in between work sessions
+    | LongBreak  -- A longer break between sessions
+    | Off        -- timer is off
 
-timeToString : Time.Posix -> String
-timeToString time = 
-    (String.padLeft 2 '0' <| String.fromInt <| Time.toMinute utc time) 
-    ++ ":" ++
-    (String.padLeft 2 '0' <| String.fromInt <| Time.toSecond utc time)
+type alias Model =
+    { mode  : Mode
+    , round : Int 
+    , timer : Timer
+    , stopclock : Timer -- Paused timer used to keep track of when to stop
+    }
 
+modeToString : Mode -> String
+modeToString mode = 
+    case mode of 
+        Work       -> "Work"
+        ShortBreak -> "Short break"
+        LongBreak  -> "Long break"
+        Off        -> ""
 
 -- VIEW
 view : Model -> Html Msg
 view model = 
     div []
-        [ viewTime model
-        , button [ onClick Stop ] [ text "Stop" ]
-        , button [ onClick Start ] [ text "Start" ]
+        [ viewMode model.mode
+        , p [] [ text (String.fromInt model.round) ]
+        , viewTime model.timer
+        , button [ onClick Toggle ] [ text (if Timer.going model.timer then "pause" else "start") ]
+        , button [ onClick Reset ] [ text "reset" ]
         ]
 
-viewTime  : Model -> Html Msg
-viewTime model = 
-    case model of
-        Just time -> 
-            h3 [] [ text (timeToString <| Time.millisToPosix (time*1000)) ]
-        Nothing -> 
-            h3 [] [ text "00:00" ]
+
+viewMode : Mode -> Html Msg
+viewMode mode =
+    case mode of
+        Off -> 
+            h3 [] [ text "Press begin"]
+        _ ->
+            h3 [] [ text (modeToString mode) ]
+
+viewTime  : Timer.Timer -> Html Msg
+viewTime timer = 
+    h3 [] [ text (Timer.toString timer) ]
 
 -- UPDATE
-type Msg 
-    = Tick Time.Posix
-    | Start
-    | Stop
+
+swap : Model -> Model
+swap model = 
+    case model.mode of
+        Work -> 
+            if model.round == 3 then
+                { mode = LongBreak
+                , round = 0
+                , timer = Timer.restart
+                , stopclock = longBreakStopclock
+                }
+            else
+                { mode = ShortBreak
+                , round = model.round + 1
+                , timer = Timer.restart
+                , stopclock = shortBreakStopclock
+                }
+        ShortBreak ->
+            { model | mode = Work, timer = Timer.restart, stopclock = workStopclock }
+        LongBreak ->
+            { model | mode = Work, timer = Timer.restart, stopclock = workStopclock }
+        Off -> 
+            model
+
+setMode : Mode -> Mode
+setMode mode = 
+    case mode of
+        Off ->
+            Work
+        _ ->
+            mode
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model = 
     case msg of 
-        Tick time -> 
-            ( Maybe.map (\x -> x+1) model, Cmd.none )
-        Stop ->
-            ( Nothing, Cmd.none )
-        Start ->
-            ( Just 0, Cmd.none ) 
+        Tick _ -> 
+            if isLess model.timer model.stopclock then
+                ( { model | timer = Timer.tick Timer.second model.timer }, Cmd.none )
+            else
+                (swap model, Cmd.none)
+        Reset -> 
+            init ()
+        Toggle ->
+            ( { model | mode = setMode model.mode, timer = Timer.toggle model.timer }, Cmd.none )
 
+type Msg 
+    = Tick Time.Posix
+    | Reset
+    | Toggle
+
+-- SUBS
+second : Model -> Sub Msg
+second _ =
+    Time.every 1000 Tick
 
 -- MAIN
-init : () -> ( Model, Cmd Msg )
-init _ =  ( Nothing, Cmd.none )
+workStopclock : Timer
+workStopclock = Timer.fromSecond 10         -- dummy value
+shortBreakStopclock : Timer
+shortBreakStopclock = Timer.fromSecond 2    -- dummy value
+longBreakStopclock : Timer
+longBreakStopclock = Timer.fromSecond 5     -- dummy value
 
-tick : Model -> Sub Msg
-tick model =
-    Time.every 1000 Tick
+init : () -> ( Model, Cmd Msg )
+init _ = 
+    ({ mode = Off
+     , round = 0
+     , timer = Timer.reset
+     , stopclock = workStopclock
+     }
+     , Cmd.none
+    )
 
 main : Program () Model Msg
 main =
@@ -64,5 +133,5 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = tick
+        , subscriptions = second
         }
