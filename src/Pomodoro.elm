@@ -1,11 +1,14 @@
 module Pomodoro exposing (main)
 
 import Browser
-import Html exposing (..)
-import Html.Events exposing (onClick)
 import Time
 import Timer exposing (Timer, isLess)
 
+import Element exposing (Element, el, text, row, layout)
+import Element.Background as Background
+import Element.Input exposing (button)
+import Element.Border as Border
+import Element.Font as Font
 
 -- MODEL
 type Mode
@@ -30,28 +33,39 @@ modeToString mode =
         Off        -> ""
 
 -- VIEW
-view : Model -> Html Msg
-view model = 
-    div []
+view : Model -> Browser.Document Msg
+view model =
+    { title = "Pomodoro"
+    , body =
+        [ layout [] (viewMain model) ]
+    }
+
+viewMain : Model -> Element Msg
+viewMain model = 
+    row []
         [ viewMode model.mode
-        , p [] [ text (String.fromInt model.round) ]
+        , el [] ( text (String.fromInt model.round) )
         , viewTime model.timer
-        , button [ onClick Toggle ] [ text (if Timer.going model.timer then "pause" else "start") ]
-        , button [ onClick Reset ] [ text "reset" ]
+        , button [] { onPress = Just Toggle
+                    , label = text (if Timer.going model.timer then "pause" else "start")
+                    }
+        , button [] { onPress = Just Reset
+                    , label = text "reset" 
+                    }
         ]
 
 
-viewMode : Mode -> Html Msg
+viewMode : Mode -> Element Msg
 viewMode mode =
     case mode of
         Off -> 
-            h3 [] [ text "Press begin"]
+            el [] (text "Press begin")
         _ ->
-            h3 [] [ text (modeToString mode) ]
+            el [] (text (modeToString mode)) 
 
-viewTime  : Timer.Timer -> Html Msg
+viewTime  : Timer.Timer -> Element Msg
 viewTime timer = 
-    h3 [] [ text (Timer.toString timer) ]
+    el [] (text (Timer.toString timer))
 
 -- UPDATE
 
@@ -129,7 +143,7 @@ init _ =
 
 main : Program () Model Msg
 main =
-    Browser.element
+    Browser.document
         { init = init
         , view = view
         , update = update
