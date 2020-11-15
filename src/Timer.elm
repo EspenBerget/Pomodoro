@@ -1,9 +1,27 @@
-module Timer exposing (Timer, going, reset, isLess, tick, second, minute, fromMinute, fromSecond, stop, toggle, continue, restart, map, toString)
+module Timer exposing ( Timer
+                      , getTime
+                      , add
+                      , toSecond
+                      , toMinute
+                      , going
+                      , reset
+                      , isLess
+                      , tick
+                      , second
+                      , minute
+                      , fromMinute
+                      , fromSecond
+                      , stop
+                      , toggle
+                      , continue
+                      , restart
+                      , map
+                      , toString
+                      )
 
 type Timer 
     = Going Int     -- Timer is ticking
     | Paused Int    -- Timer is paused
-
 
 -- Misc
 map : (Int -> Int) -> Timer -> Timer
@@ -26,7 +44,6 @@ tick : Int -> Timer -> Timer
 tick n timer = 
     map (\t -> t + n) timer
 
--- checks if the first timer is less then the second timer
 isLess : Timer -> Timer -> Bool
 isLess t1 t2 =
     getTime t1 < getTime t2
@@ -38,6 +55,14 @@ going timer =
             True
         _ -> 
             False
+
+add : Timer -> Timer -> Timer
+add t1 t2 = 
+    case t1 of
+        Going t -> 
+            Going (t + getTime t2)
+        Paused t ->
+            Paused (t + getTime t2)
     
 -- Controls
 reset : Timer
@@ -80,7 +105,7 @@ minute : Int
 minute = 60000
 
 -- Covert
--- Mostly copied from elm/time
+-- inspired by elm/time
 flooredDiv : Int -> Float -> Int
 flooredDiv numerator denominator = 
     floor (toFloat numerator / denominator) 
@@ -95,11 +120,11 @@ toSecond timer =
 
 fromMinute : Int -> Timer
 fromMinute n = 
-    Paused (n * minute)
+    Paused (abs n * minute)
 
 fromSecond : Int -> Timer
 fromSecond n = 
-    Paused (n * second)
+    Paused (abs n * second)
 
 toString : Timer -> String
 toString timer =
