@@ -4,11 +4,12 @@ import Browser
 import Time
 import Timer exposing (Timer, isLess)
 
-import Element exposing (Element, el, text, row, layout)
+import Element exposing (..)
 import Element.Background as Background
-import Element.Input exposing (button)
 import Element.Border as Border
 import Element.Font as Font
+import Element.Input exposing (button)
+import Browser.Navigation exposing (back)
 
 -- MODEL
 type Mode
@@ -37,31 +38,66 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "Pomodoro"
     , body =
-        [ layout [] (viewMain model) ]
+        [ layout [behindContent background, clip] (viewMain model) ]
     }
+
+background : Element Msg
+background = 
+    image [width fill]
+          { src = "images/aaron-burden-study.jpg"
+          , description = "Background image representing a study environment"
+          }
 
 viewMain : Model -> Element Msg
 viewMain model = 
-    row []
-        [ viewMode model.mode
-        , el [] ( text (String.fromInt model.round) )
-        , viewTime model.timer
-        , button [] { onPress = Just Toggle
-                    , label = text (if Timer.going model.timer then "pause" else "start")
-                    }
-        , button [] { onPress = Just Reset
-                    , label = text "reset" 
-                    }
-        ]
+    column [ spacing 30
+           , padding 50
+           , centerX
+           , centerY
+           , Border.rounded 5
+           , Background.color (rgba 0.6 0.1 0.2 0.8)
+           , Font.family [ Font.typeface "Helvetica" ]
+           , Font.color (rgb255 220 220 220)
+           ]
+           [ viewMode model.mode
+           , el [ Font.bold ] ( text <| "Round " ++ (String.fromInt model.round) )
+           , viewTime model.timer
+           , row [ spacing 20 ]
+                [ btn { onPress = Just Toggle
+                  , label = text (if Timer.going model.timer then "pause" else "start")
+                  }
+                  , btn { onPress = Just Reset
+                        , label = text "reset" 
+                        }
+                ]
+           ]
 
+btn : { onPress : Maybe Msg, label : Element Msg} -> Element Msg
+btn =
+    button
+        [ Background.color (rgb255 0 140 186)
+        , Border.rounded 5
+        , Font.color (rgb255 25 25 25) 
+        , width (minimum 75 fill)
+        , height (minimum 30 fill)
+        , Font.center
+        , mouseOver [ Font.color (rgb 220 220 220) ]
+        , focused [] -- Noop when focused
+        ] 
 
 viewMode : Mode -> Element Msg
 viewMode mode =
-    case mode of
+    (case mode of
         Off -> 
-            el [] (text "Press begin")
+            (text "Press begin")
         _ ->
-            el [] (text (modeToString mode)) 
+            (text (modeToString mode)))
+    |> el [ Font.size 25
+          , Font.family 
+                [ Font.typeface "Candara"
+                , Font.sansSerif
+                ]
+          ]
 
 viewTime  : Timer.Timer -> Element Msg
 viewTime timer = 
@@ -73,22 +109,30 @@ swap : Model -> Model
 swap model = 
     case model.mode of
         Work -> 
-            if model.round == 3 then
-                { mode = LongBreak
-                , round = 0
+            if model.round == 4 then
+                { model 
+                | mode = LongBreak
                 , timer = Timer.restart
                 , stopclock = longBreakStopclock
                 }
             else
-                { mode = ShortBreak
-                , round = model.round + 1
+                { model
+                | mode = ShortBreak
                 , timer = Timer.restart
                 , stopclock = shortBreakStopclock
                 }
         ShortBreak ->
-            { model | mode = Work, timer = Timer.restart, stopclock = workStopclock }
+            { mode = Work
+            , round = model.round + 1
+            , timer = Timer.restart
+            , stopclock = workStopclock
+            }
         LongBreak ->
-            { model | mode = Work, timer = Timer.restart, stopclock = workStopclock }
+            { mode = Work
+            , round = 1
+            , timer = Timer.restart
+            , stopclock = workStopclock
+            }
         Off -> 
             model
 
@@ -134,7 +178,7 @@ longBreakStopclock = Timer.fromSecond 5     -- dummy value
 init : () -> ( Model, Cmd Msg )
 init _ = 
     ({ mode = Off
-     , round = 0
+     , round = 1
      , timer = Timer.reset
      , stopclock = workStopclock
      }
