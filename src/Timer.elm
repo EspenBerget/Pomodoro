@@ -1,4 +1,5 @@
 module Timer exposing ( Timer
+                      , isMore
                       , getTime
                       , add
                       , toSecond
@@ -6,7 +7,8 @@ module Timer exposing ( Timer
                       , going
                       , reset
                       , isLess
-                      , tick
+                      , tickUp
+                      , tickDown
                       , second
                       , minute
                       , fromMinute
@@ -40,13 +42,21 @@ getTime timer =
         Paused time -> 
             time
 
-tick : Int -> Timer -> Timer
-tick n timer = 
+tickUp : Int -> Timer -> Timer
+tickUp n timer = 
     map (\t -> t + n) timer
+
+tickDown : Int -> Timer -> Timer
+tickDown n timer = 
+    map (\t -> t - n) timer
 
 isLess : Timer -> Timer -> Bool
 isLess t1 t2 =
     getTime t1 < getTime t2
+
+isMore : Timer -> Timer -> Bool
+isMore t1 t2 =
+    getTime t1 > getTime t2
 
 going : Timer -> Bool
 going timer = 

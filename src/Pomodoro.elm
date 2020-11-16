@@ -2,7 +2,7 @@ module Pomodoro exposing (main)
 
 import Browser
 import Time
-import Timer exposing (Timer, isLess)
+import Timer exposing (Timer, isMore)
 
 import Element exposing (..)
 import Element.Background as Background
@@ -22,7 +22,6 @@ type alias Model =
     { mode  : Mode
     , round : Int 
     , timer : Timer
-    , stopclock : Timer -- Paused timer used to keep track of when to stop
     }
 
 modeToString : Mode -> String
@@ -112,26 +111,22 @@ swap model =
             if model.round == 4 then
                 { model 
                 | mode = LongBreak
-                , timer = Timer.restart
-                , stopclock = longBreakStopclock
+                , timer = Timer.toggle longBreakTimer
                 }
             else
                 { model
                 | mode = ShortBreak
-                , timer = Timer.restart
-                , stopclock = shortBreakStopclock
+                , timer = Timer.toggle shortBreakTimer
                 }
         ShortBreak ->
             { mode = Work
             , round = model.round + 1
-            , timer = Timer.restart
-            , stopclock = workStopclock
+            , timer = Timer.toggle workTimer
             }
         LongBreak ->
             { mode = Work
             , round = 1
-            , timer = Timer.restart
-            , stopclock = workStopclock
+            , timer = Timer.toggle workTimer
             }
         Off -> 
             model
@@ -148,8 +143,8 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model = 
     case msg of 
         Tick _ -> 
-            if isLess model.timer model.stopclock then
-                ( { model | timer = Timer.tick Timer.second model.timer }, Cmd.none )
+            if isMore model.timer Timer.reset then
+                ( { model | timer = Timer.tickDown Timer.second model.timer }, Cmd.none )
             else
                 (swap model, Cmd.none)
         Reset -> 
@@ -168,19 +163,18 @@ second _ =
     Time.every 1000 Tick
 
 -- MAIN
-workStopclock : Timer
-workStopclock = Timer.fromSecond 10         -- dummy value
-shortBreakStopclock : Timer
-shortBreakStopclock = Timer.fromSecond 2    -- dummy value
-longBreakStopclock : Timer
-longBreakStopclock = Timer.fromSecond 5     -- dummy value
+workTimer : Timer
+workTimer = Timer.fromSecond 10         -- dummy value
+shortBreakTimer : Timer
+shortBreakTimer = Timer.fromSecond 2    -- dummy value
+longBreakTimer : Timer
+longBreakTimer = Timer.fromSecond 5     -- dummy value
 
 init : () -> ( Model, Cmd Msg )
 init _ = 
     ({ mode = Off
      , round = 1
-     , timer = Timer.reset
-     , stopclock = workStopclock
+     , timer = workTimer
      }
      , Cmd.none
     )

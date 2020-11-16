@@ -6,4 +6,3 @@ From Wikipedia
 
 ### TODO
 * Let user control interval length
-* Make timer count down
